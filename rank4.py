@@ -12,7 +12,7 @@ get_url = f"{host}/get-word"
 status_url = f"{host}/status"
 
 # Setează PLAYER_ID-ul (modifică manual între "player1" sau "player2")
-PLAYER_ID = "player1"
+PLAYER_ID = "NNPScDuaYV"
 
 def load_words(filename):
     """
