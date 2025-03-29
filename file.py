@@ -1,68 +1,49 @@
-import re
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+    import spacy
+    import numpy as np
 
-def get_local_llm_pipeline(model_name="gpt2-large"):
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    model.to("cpu")
-    # Configure tokenizer for single-number responses
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    return pipeline(
-        "text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        device=-1,  # CPU
-        pad_token_id=tokenizer.eos_token_id
-    )
+    # Load the medium-sized English model
+    nlp = spacy.load("en_core_web_md")
 
-def query_llm(pipeline_obj, word):
-    prompt = (
-        "Evaluate the power score (1-100) for the word: {word}\n"
-        "Examples (DO NOT USE THESE):\n"
-        "Feather → 1 | Sword → 35 | Nuclear → 95 | Entropy → 100\n"
-        "Score for '{word}':"
-    ).format(word=word)
-    
-    response = pipeline_obj(
-        prompt,
-        max_new_tokens=5,
-        do_sample=True,
-        temperature=0.8,
-        top_p=0.9,
-        num_return_sequences=1,
-        return_full_text=False,
-        clean_up_tokenization_spaces=True
-    )[0]["generated_text"]
-    return response.strip()
+    # Define a set of seed words representing "power"
+    seed_words = ["power", "strength", "force", "mighty", "dominant"]
 
-def extract_score(response):
-    # Extract first valid integer from response
-    match = re.search(r"\b(100|\d{1,2})\b", response.split("\n")[0])
-    return int(match.group()) if match else None
+    def compute_power_score(word, seeds=seed_words):
+        # Process the target word (assuming it is a single token)
+        token = nlp(word)[0]
+        
+        # Compute similarity scores with each seed word
+        similarities = []
+        for seed in seeds:
+            seed_token = nlp(seed)[0]
+            sim = token.similarity(seed_token)
+            similarities.append(sim)
+        
+        # Calculate both average and maximum similarity scores.
+        avg_sim = np.mean(similarities)
+        max_sim = max(similarities)
+        
+        # Combine the scores: weight maximum similarity more heavily.
+        # You can adjust the weights (here 30% average and 70% maximum) if needed.
+        combined_sim = 0.3 * avg_sim + 0.7 * max_sim
 
-def main():
-    print("Loading GPT-2 Large (this may take 2-5 minutes and ~5GB RAM)...")
-    llm_pipeline = get_local_llm_pipeline()
-    
-    while True:
-        word = input("\nEnter a word (or 'q' to quit): ").strip().lower()
-        if word == 'q':
-            break
+        # Map the combined similarity to a score between 1 and 100.
+        # Assume typical combined similarities range between 0.2 and 0.8; adjust as needed.
+        lower_bound = 0.2
+        upper_bound = 0.8
+        normalized = (combined_sim - lower_bound) / (upper_bound - lower_bound)
+        normalized = max(0, min(normalized, 1))  # Clamp between 0 and 1
+        score = int(normalized * 99 + 1)  # Scale to 1-100
+        
+        return score
+
+    def main():
+        word = input("Enter a word: ").strip()
         if not word:
-            print("Please enter a valid word")
-            continue
-            
-        print(f"\nEvaluating '{word}'...")
-        try:
-            response = query_llm(llm_pipeline, word)
-            print("Raw Model Output:", repr(response))
-            
-            score = extract_score(response) or "N/A"
-            print(f"Power Score: {score if score != 'N/A' else 'Could not determine'}")
+            print("No word provided!")
+            return
+        
+        score = compute_power_score(word)
+        print(f"\nPower Score for '{word}': {score}")
 
-        except Exception as e:
-            print(f"Error: {str(e)}")
-
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()

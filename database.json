@@ -1113,7 +1113,9 @@
     "1095": {"Nume": "Omnipresence", "power": 100},
     "1096": {"Nume": "Omnipotence", "power": 100},
     "1097": {"Nume": "Dust", "cost": 1, "power": 33},
-    "1098": {"Nume": "Chalk", "cost": 1, "power": 3}
+    "1098": {"Nume": "Chalk", "cost": 1, "power": 3},
+    "1099": {"Nume": "God", "cost": 1, "power": 100},
+    "1100": {"Nume": "Leather", "cost": 1, "power": 1}
   }
   
   
